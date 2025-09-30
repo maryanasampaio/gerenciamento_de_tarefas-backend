@@ -2,27 +2,35 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class Usuario extends Model
+class Usuario extends Authenticatable implements JWTSubject
 {
-
     protected $table = 'tb_usuario';
-    protected $primary_key = 'id_usuario';
-    public $timestamps = true;
+    protected $primaryKey = 'id_usuario';
 
     protected $fillable = [
-        'usuario',
-        'senha',
         'nome_completo',
+        'usuario',
         'email',
+        'senha'
     ];
 
-    protected $hidden = [
-        'senha',
-    ];
 
-    protected $dates = [
-        'deleted_at',
-    ];
+    public function getAuthPassword()
+    {
+        return $this->senha;
+    }
+
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
 }

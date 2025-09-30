@@ -30,7 +30,6 @@ class AuthController extends Controller
                 $request->input('usuario'),
                 $request->input('senha')
             );
-
             //validar e tratar respostas em casos de 400, 200 e 500
 
             //o usuário existe na base? erro 400
