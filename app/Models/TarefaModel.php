@@ -12,10 +12,10 @@ class TarefaModel extends Model
     protected $softDeletes = true;
 
     protected $fillable = [
+
         'titulo',
         'importancia',
         'status',
         'ativo',
-
     ];
 }

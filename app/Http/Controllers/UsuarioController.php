@@ -44,4 +44,19 @@ class UsuarioController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
+    public function listar()
+    {
+        try {
+            $usuarios = $this->usuarioService->listarUsuarios();
+
+            if (!$usuarios) {
+                return ResponseHelper::error('Nenhum usuário encontrado', 404);
+            }
+
+            return ResponseHelper::success($usuarios, 'Usuários listados com sucesso', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }

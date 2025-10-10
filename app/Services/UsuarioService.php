@@ -42,4 +42,11 @@ class UsuarioService
             throw new \Exception('Erro ao criar usuário: ' . $e->getMessage());
         }
     }
+
+    public function listarUsuarios()
+    {
+
+        $usuarios = Usuario::all();
+        return $usuarios;
+    }
 }
