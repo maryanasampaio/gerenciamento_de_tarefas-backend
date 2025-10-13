@@ -15,10 +15,11 @@ Route::prefix('/usuarios')->group(function () {
     Route::get('/listar', [UsuarioController::class, 'listar']);
 });
 
-
-Route::prefix('/tarefas')->group(function () {
-    Route::post('/criar', [TarefaController::class, 'criar']);
-    Route::get('/listar', [TarefaController::class, 'listar']);
-    Route::put('/atualizar/{id}', [TarefaController::class, 'atualizar']);
-    Route::delete('/deletar/{id}', [TarefaController::class, 'deletar']);
+Route::group(['middleware' => ['jwt.auth']], function () {
+    Route::prefix('tarefas')->group(function () {
+        Route::post('/criar', [TarefaController::class, 'criar']);
+        Route::get('/listar', [TarefaController::class, 'listar']);
+        Route::put('/atualizar/{id}', [TarefaController::class, 'atualizar']);
+        Route::delete('/deletar/{id}', [TarefaController::class, 'deletar']);
+    });
 });

@@ -33,4 +33,8 @@ class Usuario extends Authenticatable implements JWTSubject
     {
         return [];
     }
+    public function tarefas()
+    {
+        return $this->hasMany(TarefaModel::class, 'id_usuario', 'id_usuario');
+    }
 }
