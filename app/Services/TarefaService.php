@@ -72,4 +72,19 @@ class TarefaService
             throw new \Exception('Erro ao atualizar tarefa: ' . $e->getMessage());
         }
     }
+
+    public function deletarTarefa(int $id_tarefa)
+    {
+        try {
+            $tarefa = TarefaModel::find($id_tarefa);
+
+            if (!$tarefa) {
+                throw new \Exception("Tarefa não encontrada");
+            }
+            $tarefa->delete();
+            return $tarefa;
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
 }

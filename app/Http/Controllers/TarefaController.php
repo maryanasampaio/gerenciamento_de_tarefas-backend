@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Helpers\ResponseHelper;
 use App\Services\TarefaService;
 
+use function PHPUnit\Framework\isEmpty;
+
 class TarefaController extends Controller
 {
     protected $service;
@@ -64,6 +66,20 @@ class TarefaController extends Controller
             return ResponseHelper::success([$tarefaAtualizada], 'Tarefa atualizada com sucesso', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error('Erro ao atualizar tarefa: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function deletar(int $id)
+    {
+        try {
+            if (empty($id)) {
+                return ResponseHelper::error('Tarefa não informada', 400);
+            }
+
+            $this->service->deletarTarefa($id);
+            return ResponseHelper::success(null, 'Tarefa deletada com sucesso', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error('Erro ao deletar tarefa: ' . $e->getMessage(), 500);
         }
     }
 }
