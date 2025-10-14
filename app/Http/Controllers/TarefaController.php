@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Helpers\ResponseHelper;
 use App\Services\TarefaService;
+use Illuminate\Support\Facades\Auth;
 
-use function PHPUnit\Framework\isEmpty;
+
 
 class TarefaController extends Controller
 {
@@ -27,11 +28,16 @@ class TarefaController extends Controller
                 'ativo' => 'required|boolean',
             ]);
 
+            $usuario = Auth::user();
+            if (!$usuario) {
+                return ResponseHelper::error('Usuário não autenticado', 401);
+            }
             $tarefa = $this->service->criarTarefa(
                 $request->input('titulo'),
                 $request->input('importancia'),
                 $request->input('status'),
-                $request->input('ativo')
+                $request->input('ativo'),
+                $usuario->id_usuario
             );
 
             return ResponseHelper::success($tarefa, 'Tarefa criada com sucesso', 201);
@@ -43,7 +49,14 @@ class TarefaController extends Controller
     public function listar()
     {
         try {
-            $tarefas = $this->service->listarTarefas();
+            $usuario = Auth::user();
+
+            if (!$usuario) {
+                return ResponseHelper::error('Usuário não autenticado', 401);
+            }
+
+
+            $tarefas = $this->service->listarTarefas($usuario->id_usuario);
             return ResponseHelper::success($tarefas, 'Tarefas listadas com sucesso', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error('Erro ao listar tarefas: ' . $e->getMessage(), 500);

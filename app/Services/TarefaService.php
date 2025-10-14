@@ -6,13 +6,14 @@ use App\Models\TarefaModel;
 
 class TarefaService
 {
-    public function criarTarefa(string $titulo, string $importancia, string $status, bool $ativo)
+    public function criarTarefa(string $titulo, string $importancia, string $status, bool $ativo, $id_usuario)
     {
         $tarefa = TarefaModel::create([
             'titulo' => $titulo,
             'importancia' => $importancia,
             'status' => $status,
             'ativo' => $ativo,
+            'id_usuario' => $id_usuario
         ]);
 
         if (!in_array($tarefa->status, ['pendente', 'em_andamento', 'concluida'])) {
@@ -26,19 +27,31 @@ class TarefaService
         return $tarefa;
     }
 
-    public function listarTarefas()
+    public function listarTarefas(int $id_usuario)
     {
-        $tarefas = TarefaModel::all([
-            'id_tarefa',
-            'titulo',
-            'importancia',
-            'status',
-            'ativo',
-            'created_at'
-        ]);
+        try {
+            $tarefas = TarefaModel::where('id_usuario', $id_usuario)
+                ->orderBy('created_at', 'desc')
+                ->get([
+                    'id_tarefa',
+                    'titulo',
+                    'importancia',
+                    'status',
+                    'ativo',
+                    'created_at',
+                    'id_usuario'
+                ]);
 
-        return $tarefas;
+            if ($tarefas->isEmpty()) {
+                return [];
+            }
+
+            return $tarefas;
+        } catch (\Exception $e) {
+            throw new \Exception('Erro ao listar tarefas: ' . $e->getMessage());
+        }
     }
+
 
     public function atualizarTarefa(int $id, array $dados)
     {

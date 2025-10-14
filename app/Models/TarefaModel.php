@@ -17,6 +17,7 @@ class TarefaModel extends Model
         'importancia',
         'status',
         'ativo',
+        'id_usuario'
     ];
 
     public function usuario()
