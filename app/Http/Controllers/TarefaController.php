@@ -63,24 +63,34 @@ class TarefaController extends Controller
         }
     }
 
-    public function atualizar(Request $request, int $id)
+    public function atualizar(Request $request, int $id_tarefa)
     {
         try {
             $request->validate([
                 'titulo' => 'sometimes|string',
-                'importancia' => 'sometimes|string',
-                'status' => 'sometimes|string',
+                'importancia' => 'sometimes|string|in:baixa,media,alta',
+                'status' => 'sometimes|string|in:pendente,em_andamento,concluida',
                 'ativo' => 'sometimes|boolean',
             ]);
 
-            $dados = $request->only(['titulo', 'importancia', 'status', 'ativo']);
-            $tarefaAtualizada = $this->service->atualizarTarefa($id, $dados);
+            $usuario = Auth::user();
 
-            return ResponseHelper::success([$tarefaAtualizada], 'Tarefa atualizada com sucesso', 200);
+            if (!$usuario) {
+                return ResponseHelper::error('Usuário não autenticado', 401);
+            }
+
+            $tarefaAtualizada = $this->service->atualizarTarefa(
+                $id_tarefa,
+                $request->all(),
+                $usuario->id_usuario
+            );
+
+            return ResponseHelper::success($tarefaAtualizada, 'Tarefa atualizada com sucesso', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error('Erro ao atualizar tarefa: ' . $e->getMessage(), 500);
         }
     }
+
 
     public function deletar(int $id)
     {

@@ -53,12 +53,15 @@ class TarefaService
     }
 
 
-    public function atualizarTarefa(int $id, array $dados)
+    public function atualizarTarefa(int $id_tarefa, array $dados, int $id_usuario)
     {
         try {
-            $tarefa = TarefaModel::find($id);
+            $tarefa = TarefaModel::where('id_tarefa', $id_tarefa)
+                ->where('id_usuario', $id_usuario)
+                ->first();
+
             if (!$tarefa) {
-                throw new \Exception("Tarefa não encontrada");
+                throw new \Exception('Tarefa não encontrada ou não pertence ao usuário.');
             }
 
             if (isset($dados['status']) && !in_array($dados['status'], ['pendente', 'em_andamento', 'concluida'])) {

@@ -35,4 +35,21 @@ class AuthService
 
         ];
     }
+
+    public function logout()
+    {
+        try {
+            $token = JWTAuth::getToken();
+
+            if (!$token) {
+                throw new \Exception('Token não encontrado');
+            }
+
+            JWTAuth::invalidate($token);
+
+            return true;
+        } catch (\Exception $e) {
+            throw new \Exception('Erro ao realizar logout: ' . $e->getMessage());;
+        }
+    }
 }

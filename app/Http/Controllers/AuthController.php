@@ -42,4 +42,14 @@ class AuthController extends Controller
             return ResponseHelper::error('Erro interno: ' . $e->getMessage(), 500);
         }
     }
+
+    public function logout(Request $request)
+    {
+        try {
+            $this->authService->logout();
+            return ResponseHelper::success(null, 'Logout realizado com sucesso', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }

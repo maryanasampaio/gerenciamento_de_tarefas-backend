@@ -22,4 +22,6 @@ Route::group(['middleware' => ['jwt.auth']], function () {
         Route::put('/atualizar/{id}', [TarefaController::class, 'atualizar']);
         Route::delete('/deletar/{id}', [TarefaController::class, 'deletar']);
     });
+
+    Route::middleware('auth:api')->post('/logout', [AuthController::class, 'logout']);
 });
