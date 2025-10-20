@@ -59,4 +59,27 @@ class UsuarioController extends Controller
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
+
+
+    public function atualizar(int $id_usuario, Request $request)
+    {
+        try {
+            $request->validate([
+                'nome_completo' => 'sometimes|string|max:255',
+                'usuario' => 'sometimes|string|max:50',
+                'email' => 'sometimes|email',
+                'senha' => 'sometimes|string|min:8',
+            ]);
+
+            if (empty($id_usuario)) {
+                return ResponseHelper::error('ID do usuário não informado', 400);
+            }
+
+            $usuario = $this->usuarioService->atualizarUsuario($id_usuario, $request->all());
+
+            return ResponseHelper::success($usuario, 'Usuário atualizado com sucesso', 200);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
 }
