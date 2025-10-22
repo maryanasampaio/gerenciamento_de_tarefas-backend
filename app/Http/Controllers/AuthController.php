@@ -17,39 +17,35 @@ class AuthController extends Controller
         $this->authService = $authService;
     }
 
-
     public function login(Request $request)
     {
         try {
-            //validação de campos obrigatórios para o login
             $request->validate([
                 'usuario' => 'required|string',
                 'senha' => 'required|string',
             ]);
 
-            //envio dos dados para a validação e busca no banco de dados
-            $usuario = $this->authService->login(
+            $resultado = $this->authService->login(
                 $request->input('usuario'),
                 $request->input('senha')
             );
-            //validar e tratar respostas em casos de 400, 200 e 500
 
-            //o usuário existe na base? erro 400
-            if (!$usuario) {
-                return ResponseHelper::error('Credenciais inválidas', 401);
-            }
-            //caso o usuário exista: 200
-            return ResponseHelper::success($usuario, 'Login realizado com sucesso', 200);
+            return ResponseHelper::success(
+                $resultado['usuario'],
+                'Login realizado com sucesso',
+                200
+            )->withCookie($resultado['cookie']);
         } catch (\Exception $e) {
-            return ResponseHelper::error('Erro interno: ' . $e->getMessage(), 500);
+            return ResponseHelper::error('Erro ao fazer login: ' . $e->getMessage(), 500);
         }
     }
 
     public function logout()
     {
         try {
-            $this->authService->logout();
-            return ResponseHelper::success(null, 'Logout realizado com sucesso', 200);
+            $cookie = $this->authService->logout();
+            return ResponseHelper::success(null, 'Logout realizado com sucesso', 200)
+                ->withCookie($cookie);
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
@@ -69,7 +65,6 @@ class AuthController extends Controller
                 'nome_completo' => $usuario->nome_completo,
                 'usuario' => $usuario->usuario,
                 'email' => $usuario->email,
-                'senha' => Hash::make($usuario->senha),
             ], 'Usuário autenticado obtido com sucesso', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error('Erro ao obter usuário autenticado: ' . $e->getMessage(), 500);

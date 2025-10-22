@@ -5,34 +5,46 @@ namespace App\Services;
 use App\Models\Usuario;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
-
-
-
+use Illuminate\Support\Facades\Cookie;
 
 class AuthService
 {
-
     public function login($usuario, $senha)
     {
-
         $usuario = Usuario::where('usuario', $usuario)->first();
 
         if (!$usuario) {
             throw new \Exception('Usuário não encontrado');
         }
+
         if (!Hash::check($senha, $usuario->senha)) {
             throw new \Exception('Senha incorreta');
         }
+
         $token = JWTAuth::fromUser($usuario);
+
+
+        $cookie = cookie(
+            'token',
+            $token,
+            config('jwt.ttl'),
+            '/',
+            null,
+            false,
+            true,
+            false,
+            'Strict'
+        );
+
 
         return [
             'usuario' => [
+                'id_usuario'   => $usuario->id_usuario,
                 'nome'         => $usuario->nome_completo,
-                'usuario'     => $usuario->usuario,
+                'usuario'      => $usuario->usuario,
                 'email'        => $usuario->email,
             ],
-            'token' => $token,
-
+            'cookie' => $cookie
         ];
     }
 
@@ -41,15 +53,16 @@ class AuthService
         try {
             $token = JWTAuth::getToken();
 
-            if (!$token) {
-                throw new \Exception('Token não encontrado');
+            if ($token) {
+                JWTAuth::invalidate($token);
             }
 
-            JWTAuth::invalidate($token);
 
-            return true;
+            $cookie = Cookie::forget('token');
+
+            return $cookie;
         } catch (\Exception $e) {
-            throw new \Exception('Erro ao realizar logout: ' . $e->getMessage());;
+            throw new \Exception('Erro ao realizar logout: ' . $e->getMessage());
         }
     }
 }
