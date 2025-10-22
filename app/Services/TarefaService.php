@@ -103,4 +103,23 @@ class TarefaService
             throw new \Exception($e->getMessage());
         }
     }
+
+    public function pesquisar(?string $termo)
+    {
+        try {
+            if (empty($termo)) {
+                throw new \Exception('Termo de pesquisa não informado');
+            }
+
+            $resultadoPesquisa = TarefaModel::where('titulo', 'like', "%{$termo}%")
+                ->orWhere('status', 'like', "%{$termo}%")
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+
+            return $resultadoPesquisa;
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
 }

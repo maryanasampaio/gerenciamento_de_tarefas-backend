@@ -25,5 +25,6 @@ Route::group(['middleware' => ['jwt.auth']], function () {
         Route::get('/listar', [TarefaController::class, 'listar']);
         Route::put('/atualizar/{id}', [TarefaController::class, 'atualizar']);
         Route::delete('/deletar/{id}', [TarefaController::class, 'deletar']);
+        Route::get('/pesquisar', [TarefaController::class, 'pesquisar']);
     });
 });

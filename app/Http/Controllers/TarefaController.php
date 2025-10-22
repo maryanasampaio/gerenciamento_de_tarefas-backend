@@ -105,4 +105,28 @@ class TarefaController extends Controller
             return ResponseHelper::error('Erro ao deletar tarefa: ' . $e->getMessage(), 500);
         }
     }
+
+    public function pesquisar(Request $request)
+    {
+        try {
+            $termo = $request->query('q');
+            $tarefas = $this->service->pesquisar($termo);
+
+
+            if ($tarefas->isEmpty()) {
+                return ResponseHelper::error('Nenhuma tarefa encontrada', 404);
+            }
+
+            return ResponseHelper::success(
+                $tarefas,
+                'Pesquisa realizada com sucesso',
+                200
+            );
+        } catch (\Exception $e) {
+            return ResponseHelper::error(
+                'Erro ao pesquisar tarefas: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
 }
