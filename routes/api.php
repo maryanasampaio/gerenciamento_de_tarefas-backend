@@ -5,21 +5,19 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\TarefaController;
 
-
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
-    Route::middleware('auth:api')->post('/logout', [AuthController::class, 'logout']);
-    Route::get('/usuario', [AuthController::class, 'usuarioAutenticado'])
-        ->middleware('auth:api');
+    Route::post('/logout', [AuthController::class, 'logout'])->middleware('jwt.cookie');
+    Route::get('/usuario', [AuthController::class, 'usuarioAutenticado'])->middleware('jwt.cookie');
 });
 
-Route::prefix('/usuarios')->group(function () {
+Route::prefix('usuarios')->group(function () {
     Route::post('/criar', [UsuarioController::class, 'criar']);
     Route::get('/listar', [UsuarioController::class, 'listar']);
     Route::put('/atualizar/{id}', [UsuarioController::class, 'atualizar']);
 });
 
-Route::group(['middleware' => ['jwt.auth']], function () {
+Route::group(['middleware' => ['jwt.cookie']], function () {
     Route::prefix('tarefas')->group(function () {
         Route::post('/criar', [TarefaController::class, 'criar']);
         Route::get('/listar', [TarefaController::class, 'listar']);
