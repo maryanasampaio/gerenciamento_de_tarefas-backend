@@ -7,8 +7,8 @@ use App\Http\Controllers\TarefaController;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/logout', [AuthController::class, 'logout'])->middleware('jwt.cookie');
-    Route::get('/usuario', [AuthController::class, 'usuarioAutenticado'])->middleware('jwt.cookie');
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/usuario', [AuthController::class, 'usuarioAutenticado']);
 });
 
 Route::prefix('usuarios')->group(function () {
@@ -17,7 +17,7 @@ Route::prefix('usuarios')->group(function () {
     Route::put('/atualizar/{id}', [UsuarioController::class, 'atualizar']);
 });
 
-Route::group(['middleware' => ['jwt.cookie']], function () {
+Route::group(['middleware'], function () {
     Route::prefix('tarefas')->group(function () {
         Route::post('/criar', [TarefaController::class, 'criar']);
         Route::get('/listar', [TarefaController::class, 'listar']);

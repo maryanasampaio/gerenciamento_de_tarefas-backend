@@ -13,20 +13,17 @@ class JwtCookieMiddleware
     public function handle($request, Closure $next)
     {
         try {
-
             $token = $request->cookie('token');
 
             if (!$token) {
                 return response()->json(['message' => 'Token ausente'], 401);
             }
 
-
             $user = JWTAuth::setToken($token)->authenticate();
 
             if (!$user) {
                 return response()->json(['message' => 'Usuário não encontrado'], 401);
             }
-
 
             $request->merge(['auth_user' => $user]);
         } catch (TokenExpiredException $e) {
