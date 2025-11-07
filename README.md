@@ -14,7 +14,6 @@ Desenvolvido em **Laravel 12** com **PHP 8.2**, ele oferece endpoints RESTful se
 | **Autenticação** | JWT HttpOnly |
 | **Banco de Dados** | MySQL |  |
 | **Seeders e Factories** | Laravel ORM (Eloquent) |
-| **CLI & Debug** | Artisan / Laravel Sail / Laravel Pail |
 
 ---
 
@@ -24,14 +23,14 @@ Desenvolvido em **Laravel 12** com **PHP 8.2**, ele oferece endpoints RESTful se
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/maryanasampaio/agendaKa-backend.git
-cd taskflow-backend
+git clone https://github.com/maryanasampaio/gerenciamento_de_tarefas-backend.git
+cd gerenciamento_de_tarefas-backend
 ```
 ### 2. Instalar dependências
 
 ```bash
-git clone https://github.com/seu-usuario/taskflow-backend.git
-cd taskflow-backend
+git clone https://github.com/maryanasampaio/gerenciamento_de_tarefas-backend.git
+cd gerenciamento_de_tarefas-backend
 ```
 
 ### 3. Criar o arquivo `.env`
