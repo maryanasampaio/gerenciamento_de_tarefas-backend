@@ -29,8 +29,7 @@ cd gerenciamento_de_tarefas-backend
 ### 2. Instalar dependências
 
 ```bash
-git clone https://github.com/maryanasampaio/gerenciamento_de_tarefas-backend.git
-cd gerenciamento_de_tarefas-backend
+composer install
 ```
 
 ### 3. Criar o arquivo `.env`
