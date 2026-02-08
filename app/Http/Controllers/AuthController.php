@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ResponseHelper;
 use App\Services\AuthService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Tymon\JWTAuth\Exceptions\JWTException;
@@ -29,7 +30,7 @@ class AuthController extends Controller
                 'senha' => 'required|string',
             ]);
 
-            $usuario = $this->authService->login(
+            $resultado = $this->authService->login(
                 $request->input('usuario'),
                 $request->input('senha')
             );
@@ -37,15 +38,27 @@ class AuthController extends Controller
             return response()
                 ->json([
                     'message' => 'Login realizado com sucesso',
-                    'usuario' => $usuario['usuario']
+                    'usuario' => $resultado['usuario'],
+                    'access_token' => $resultado['access_token'],
                 ], 200)
                 ->cookie(
                     'token',
-                    $usuario['token'],
+                    $resultado['access_token'],
                     60,
                     '/',
                     null,
+                    app()->environment('production'),
+                    true,
                     false,
+                    'Lax'
+                )
+                ->cookie(
+                    'refresh_token',
+                    $resultado['refresh_token'],
+                    43200,
+                    '/',
+                    null,
+                    app()->environment('production'),
                     true,
                     false,
                     'Lax'
@@ -58,11 +71,58 @@ class AuthController extends Controller
     public function logout()
     {
         try {
-            $cookie = $this->authService->logout();
+            $this->authService->logout();
+            
             return ResponseHelper::success(null, 'Logout realizado com sucesso', 200)
-                ->withCookie($cookie);
+                ->withCookie(Cookie::forget('token'))
+                ->withCookie(Cookie::forget('refresh_token'));
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
+        }
+    }
+
+    public function refresh(Request $request)
+    {
+        try {
+            $refreshToken = $request->cookie('refresh_token') 
+                ?? $request->input('refresh_token');
+
+            if (!$refreshToken) {
+                return ResponseHelper::error('Refresh token não fornecido', 400);
+            }
+
+            $resultado = $this->authService->refresh($refreshToken);
+
+            return response()
+                ->json([
+                    'message' => 'Token renovado com sucesso',
+                    'usuario' => $resultado['usuario'],
+                    'access_token' => $resultado['access_token'],
+                ], 200)
+                ->cookie(
+                    'token',
+                    $resultado['access_token'],
+                    60,
+                    '/',
+                    null,
+                    app()->environment('production'),
+                    true,
+                    false,
+                    'Lax'
+                )
+                ->cookie(
+                    'refresh_token',
+                    $resultado['refresh_token'],
+                    43200,
+                    '/',
+                    null,
+                    app()->environment('production'),
+                    true,
+                    false,
+                    'Lax'
+                );
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 401);
         }
     }
 
