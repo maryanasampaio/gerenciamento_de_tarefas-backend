@@ -1,7 +1,7 @@
 # ⚙️ TaskFlow — Backend (Laravel)
 
-O **TaskFlow Backend** é a API responsável por gerenciar autenticação, usuários e tarefas da aplicação TaskFlow.  
-Desenvolvido em **Laravel 12** com **PHP 8.2**, ele oferece endpoints RESTful seguros, autenticação via **JWT**, e suporte completo para CRUD de tarefas e configurações de usuário.
+O **TaskFlow Backend** é a API responsável por gerenciar autenticação, usuários e metas da aplicação TaskFlow.  
+Desenvolvido em **Laravel 12** com **PHP 8.2**, ele oferece endpoints RESTful seguros, autenticação via **JWT**, e suporte completo para CRUD de metas, tarefas vinculadas e configurações de usuário.
 
 ---
 
@@ -95,5 +95,24 @@ database/
 routes/
 ├── api.php
 └── web.php
+
+---
+
+## 🏁 Novos Recursos de Metas
+
+- Metas com `tipo`: diaria, mensal, anual.
+- Campos: `titulo`, `descricao` (opcional), `contexto`, `prioridade` (baixa, media, alta; padrão: baixa), `status` (pendente, em_andamento, concluida; padrão: pendente). Para metas mensais/anuais: `data_inicio` e `data_fim` obrigatórios.
+- Tarefas vinculadas à meta (`id_meta`) com `titulo`, `descricao` (opcional) e `status` (pendente ou concluida). O status da meta atualiza automaticamente: todas concluídas → concluida; pelo menos uma concluída → em_andamento; nenhuma → pendente.
+- Progresso da meta é retornado como `{ total, concluidas, percentual }` nas listagens e detalhes.
+
+## 🔗 Endpoints Principais
+
+- POST /api/metas/criar
+- GET /api/metas/listar?tipo=diaria|mensal|anual
+- GET /api/metas/detalhes/{id}
+- PUT /api/metas/atualizar/{id}
+- DELETE /api/metas/deletar/{id}
+- POST /api/metas/{id_meta}/tarefas/criar
+- PUT /api/metas/{id_meta}/tarefas/{id_tarefa}/status
 
 

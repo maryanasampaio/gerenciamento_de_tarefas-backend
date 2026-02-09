@@ -22,10 +22,10 @@ class TarefaController extends Controller
     {
         try {
             $request->validate([
+                'id_meta' => 'required|integer',
                 'titulo' => 'required|string',
-                'importancia' => 'required|string',
-                'status' => 'required|string',
-                'ativo' => 'required|boolean',
+                'descricao' => 'sometimes|string|nullable',
+                'status' => 'sometimes|string|in:pendente,concluida',
             ]);
 
             $usuario = Auth::user();
@@ -33,11 +33,11 @@ class TarefaController extends Controller
                 return ResponseHelper::error('Usuário não autenticado', 401);
             }
             $tarefa = $this->service->criarTarefa(
+                $usuario->id_usuario,
+                $request->input('id_meta'),
                 $request->input('titulo'),
-                $request->input('importancia'),
-                $request->input('status'),
-                $request->input('ativo'),
-                $usuario->id_usuario
+                $request->input('descricao'),
+                $request->input('status', 'pendente')
             );
 
             return ResponseHelper::success($tarefa, 'Tarefa criada com sucesso', 201);
@@ -55,8 +55,8 @@ class TarefaController extends Controller
                 return ResponseHelper::error('Usuário não autenticado', 401);
             }
 
-
-            $tarefas = $this->service->listarTarefas($usuario->id_usuario);
+            $id_meta = request()->query('id_meta');
+            $tarefas = $this->service->listarTarefas($usuario->id_usuario, $id_meta ? (int)$id_meta : null);
             return ResponseHelper::success($tarefas, 'Tarefas listadas com sucesso', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error('Erro ao listar tarefas: ' . $e->getMessage(), 500);
@@ -68,8 +68,8 @@ class TarefaController extends Controller
         try {
             $request->validate([
                 'titulo' => 'sometimes|string',
-                'importancia' => 'sometimes|string|in:baixa,media,alta',
-                'status' => 'sometimes|string|in:pendente,em_andamento,concluida',
+                'descricao' => 'sometimes|string|nullable',
+                'status' => 'sometimes|string|in:pendente,concluida',
                 'ativo' => 'sometimes|boolean',
             ]);
 
