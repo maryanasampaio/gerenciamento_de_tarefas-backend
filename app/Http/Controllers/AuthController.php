@@ -5,43 +5,76 @@ namespace App\Http\Controllers;
 use App\Helpers\ResponseHelper;
 use App\Services\AuthService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use Illuminate\Support\Facades\Hash;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+
+
 
 class AuthController extends Controller
 {
     protected $authService;
+
+    private function accessTokenTtlMinutes(): int
+    {
+        return (int) config('jwt.ttl', 60);
+    }
+
+    private function refreshTokenTtlMinutes(): int
+    {
+        return (int) config('jwt.refresh_ttl', 43200);
+    }
 
     public function __construct(AuthService $authService)
     {
         $this->authService = $authService;
     }
 
-
     public function login(Request $request)
     {
         try {
-            //validação de campos obrigatórios para o login
             $request->validate([
                 'usuario' => 'required|string',
                 'senha' => 'required|string',
             ]);
 
-            //envio dos dados para a validação e busca no banco de dados
-            $usuario = $this->authService->login(
+            $resultado = $this->authService->login(
                 $request->input('usuario'),
                 $request->input('senha')
             );
-            //validar e tratar respostas em casos de 400, 200 e 500
 
-            //o usuário existe na base? erro 400
-            if (!$usuario) {
-                return ResponseHelper::error('Credenciais inválidas', 401);
-            }
-            //caso o usuário exista: 200
-            return ResponseHelper::success($usuario, 'Login realizado com sucesso', 200);
+            return response()
+                ->json([
+                    'message' => 'Login realizado com sucesso',
+                    'usuario' => $resultado['usuario'],
+                    'access_token' => $resultado['access_token'],
+                ], 200)
+                ->cookie(
+                    'token',
+                    $resultado['access_token'],
+                    $this->accessTokenTtlMinutes(),
+                    '/',
+                    null,
+                    app()->environment('production'),
+                    true,
+                    false,
+                    'Lax'
+                )
+                ->cookie(
+                    'refresh_token',
+                    $resultado['refresh_token'],
+                    $this->refreshTokenTtlMinutes(),
+                    '/',
+                    null,
+                    app()->environment('production'),
+                    true,
+                    false,
+                    'Lax'
+                );
         } catch (\Exception $e) {
-            return ResponseHelper::error('Erro interno: ' . $e->getMessage(), 500);
+            return ResponseHelper::error($e->getMessage(), 500);
         }
     }
 
@@ -49,28 +82,134 @@ class AuthController extends Controller
     {
         try {
             $this->authService->logout();
-            return ResponseHelper::success(null, 'Logout realizado com sucesso', 200);
+            
+            return ResponseHelper::success(null, 'Logout realizado com sucesso', 200)
+                ->withCookie(Cookie::forget('token'))
+                ->withCookie(Cookie::forget('refresh_token'));
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }
     }
 
-    public function usuarioAutenticado()
+    public function refresh(Request $request)
     {
         try {
-            $usuario = JWTAuth::parseToken()->authenticate();
+            $refreshToken = $request->cookie('refresh_token')
+                ?? $request->input('refresh_token');
+
+            if (!$refreshToken) {
+                return ResponseHelper::error('Refresh token não fornecido', 400);
+            }
+
+            $resultado = $this->authService->refresh($refreshToken);
+
+            return response()
+                ->json([
+                    'message' => 'Token renovado com sucesso',
+                    'usuario' => $resultado['usuario'],
+                    'access_token' => $resultado['access_token'],
+                ], 200)
+                ->cookie(
+                    'token',
+                    $resultado['access_token'],
+                    $this->accessTokenTtlMinutes(),
+                    '/',
+                    null,
+                    app()->environment('production'),
+                    true,
+                    false,
+                    'Lax'
+                )
+                ->cookie(
+                    'refresh_token',
+                    $resultado['refresh_token'],
+                    $this->refreshTokenTtlMinutes(),
+                    '/',
+                    null,
+                    app()->environment('production'),
+                    true,
+                    false,
+                    'Lax'
+                );
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 401);
+        }
+    }
+
+    public function usuarioAutenticado(Request $request)
+    {
+        try {
+            $token = $request->cookie('token') ?: JWTAuth::getToken();
+            if (!$token) {
+                return ResponseHelper::error('Token ausente', 401);
+            }
+
+            $usuario = JWTAuth::setToken($token)->authenticate();
 
             if (!$usuario) {
                 return ResponseHelper::error('Usuário não encontrado', 404);
             }
 
             return ResponseHelper::success([
-                'id_usuario' => $usuario->id_usuario,
+                'id_usuario'    => $usuario->id_usuario,
                 'nome_completo' => $usuario->nome_completo,
-                'usuario' => $usuario->usuario,
-                'email' => $usuario->email,
-                'senha' => Hash::make($usuario->senha),
+                'usuario'       => $usuario->usuario,
+                'email'         => $usuario->email,
             ], 'Usuário autenticado obtido com sucesso', 200);
+        } catch (TokenExpiredException $e) {
+            try {
+                $refreshToken = $request->cookie('refresh_token')
+                    ?? $request->input('refresh_token');
+
+                if (!$refreshToken) {
+                    return ResponseHelper::error('Token expirado', 401);
+                }
+
+                $resultado = $this->authService->refresh($refreshToken);
+
+                $novoAccessToken = $resultado['access_token'];
+
+                $usuario = JWTAuth::setToken($novoAccessToken)->authenticate();
+
+                if (!$usuario) {
+                    return ResponseHelper::error('Usuário não encontrado', 404);
+                }
+
+                return ResponseHelper::success([
+                    'id_usuario'    => $usuario->id_usuario,
+                    'nome_completo' => $usuario->nome_completo,
+                    'usuario'       => $usuario->usuario,
+                    'email'         => $usuario->email,
+                ], 'Usuário autenticado obtido com sucesso', 200)
+                    ->cookie(
+                        'token',
+                        $novoAccessToken,
+                        $this->accessTokenTtlMinutes(),
+                        '/',
+                        null,
+                        app()->environment('production'),
+                        true,
+                        false,
+                        'Lax'
+                    )
+                    ->cookie(
+                        'refresh_token',
+                        $resultado['refresh_token'],
+                        $this->refreshTokenTtlMinutes(),
+                        '/',
+                        null,
+                        app()->environment('production'),
+                        true,
+                        false,
+                        'Lax'
+                    );
+            } catch (\Exception $e2) {
+                return ResponseHelper::error('Token expirado', 401);
+            }
+        } catch (TokenInvalidException $e) {
+            return ResponseHelper::error('Token inválido', 401);
+        } catch (JWTException $e) {
+            return ResponseHelper::error('Erro no token: ' . $e->getMessage(), 401);
         } catch (\Exception $e) {
             return ResponseHelper::error('Erro ao obter usuário autenticado: ' . $e->getMessage(), 500);
         }

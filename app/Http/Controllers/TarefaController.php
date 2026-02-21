@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Helpers\ResponseHelper;
 use App\Services\TarefaService;
-use Illuminate\Support\Facades\Auth;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 
 
 
@@ -18,26 +20,51 @@ class TarefaController extends Controller
         $this->service = $service;
     }
 
+    private function getUsuarioFromToken(Request $request)
+    {
+        try {
+            $token = $request->cookie('token') ?: JWTAuth::getToken();
+
+            if (!$token) {
+                return ResponseHelper::error('Token ausente', 401);
+            }
+
+            $usuario = JWTAuth::setToken($token)->authenticate();
+
+            if (!$usuario) {
+                return ResponseHelper::error('Usuário não autenticado', 401);
+            }
+
+            return $usuario;
+        } catch (TokenExpiredException $e) {
+            return ResponseHelper::error('Token expirado', 401);
+        } catch (TokenInvalidException $e) {
+            return ResponseHelper::error('Token inválido', 401);
+        } catch (\Exception $e) {
+            return ResponseHelper::error('Erro ao autenticar usuário: ' . $e->getMessage(), 401);
+        }
+    }
+
     public function criar(Request $request)
     {
         try {
             $request->validate([
+                'id_meta' => 'required|integer',
                 'titulo' => 'required|string',
-                'importancia' => 'required|string',
-                'status' => 'required|string',
-                'ativo' => 'required|boolean',
+                'descricao' => 'sometimes|string|nullable',
+                'status' => 'sometimes|string|in:pendente,concluida',
             ]);
 
-            $usuario = Auth::user();
-            if (!$usuario) {
-                return ResponseHelper::error('Usuário não autenticado', 401);
+            $usuario = $this->getUsuarioFromToken($request);
+            if ($usuario instanceof \Illuminate\Http\JsonResponse) {
+                return $usuario;
             }
             $tarefa = $this->service->criarTarefa(
+                $usuario->id_usuario,
+                $request->input('id_meta'),
                 $request->input('titulo'),
-                $request->input('importancia'),
-                $request->input('status'),
-                $request->input('ativo'),
-                $usuario->id_usuario
+                $request->input('descricao'),
+                $request->input('status', 'pendente')
             );
 
             return ResponseHelper::success($tarefa, 'Tarefa criada com sucesso', 201);
@@ -49,14 +76,14 @@ class TarefaController extends Controller
     public function listar()
     {
         try {
-            $usuario = Auth::user();
-
-            if (!$usuario) {
-                return ResponseHelper::error('Usuário não autenticado', 401);
+            $request = request();
+            $usuario = $this->getUsuarioFromToken($request);
+            if ($usuario instanceof \Illuminate\Http\JsonResponse) {
+                return $usuario;
             }
 
-
-            $tarefas = $this->service->listarTarefas($usuario->id_usuario);
+            $id_meta = request()->query('id_meta');
+            $tarefas = $this->service->listarTarefas($usuario->id_usuario, $id_meta ? (int)$id_meta : null);
             return ResponseHelper::success($tarefas, 'Tarefas listadas com sucesso', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error('Erro ao listar tarefas: ' . $e->getMessage(), 500);
@@ -68,15 +95,14 @@ class TarefaController extends Controller
         try {
             $request->validate([
                 'titulo' => 'sometimes|string',
-                'importancia' => 'sometimes|string|in:baixa,media,alta',
-                'status' => 'sometimes|string|in:pendente,em_andamento,concluida',
+                'descricao' => 'sometimes|string|nullable',
+                'status' => 'sometimes|string|in:pendente,concluida',
                 'ativo' => 'sometimes|boolean',
             ]);
 
-            $usuario = Auth::user();
-
-            if (!$usuario) {
-                return ResponseHelper::error('Usuário não autenticado', 401);
+            $usuario = $this->getUsuarioFromToken($request);
+            if ($usuario instanceof \Illuminate\Http\JsonResponse) {
+                return $usuario;
             }
 
             $tarefaAtualizada = $this->service->atualizarTarefa(
@@ -103,6 +129,30 @@ class TarefaController extends Controller
             return ResponseHelper::success(null, 'Tarefa deletada com sucesso', 200);
         } catch (\Exception $e) {
             return ResponseHelper::error('Erro ao deletar tarefa: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function pesquisar(Request $request)
+    {
+        try {
+            $termo = $request->query('q');
+            $tarefas = $this->service->pesquisar($termo);
+
+
+            if ($tarefas->isEmpty()) {
+                return ResponseHelper::error('Nenhuma tarefa encontrada', 404);
+            }
+
+            return ResponseHelper::success(
+                $tarefas,
+                'Pesquisa realizada com sucesso',
+                200
+            );
+        } catch (\Exception $e) {
+            return ResponseHelper::error(
+                'Erro ao pesquisar tarefas: ' . $e->getMessage(),
+                500
+            );
         }
     }
 }
