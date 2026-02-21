@@ -109,6 +109,10 @@ routes/
 
 - POST /api/metas/criar
 - GET /api/metas/listar?tipo=diaria|mensal|anual
+	- Opcional: `data=dd/mm/YYYY` ou `YYYY-mm-dd` para filtrar.
+		- `tipo=diaria`: usa o dia pela data de criação (`created_at`) da meta.
+		- `tipo=mensal|anual`: retorna metas cujo intervalo `data_inicio..data_fim` contém a data.
+		- Sem `tipo`: combina diárias do dia e mensais/anuais que contem a data.
 - GET /api/metas/detalhes/{id}
 - PUT /api/metas/atualizar/{id}
 - DELETE /api/metas/deletar/{id}

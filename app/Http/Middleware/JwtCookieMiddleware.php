@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
@@ -25,7 +26,9 @@ class JwtCookieMiddleware
                 return response()->json(['message' => 'Usuário não encontrado'], 401);
             }
 
+            // Disponibiliza o usuário tanto via request quanto via Auth::user()
             $request->merge(['auth_user' => $user]);
+            Auth::setUser($user);
         } catch (TokenExpiredException $e) {
             return response()->json(['message' => 'Token expirado'], 401);
         } catch (TokenInvalidException $e) {

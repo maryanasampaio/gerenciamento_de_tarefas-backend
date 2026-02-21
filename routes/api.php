@@ -10,6 +10,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::get('/me', [AuthController::class, 'usuarioAutenticado']);
     Route::get('/usuario', [AuthController::class, 'usuarioAutenticado']);
 });
 
@@ -30,6 +31,7 @@ Route::group(['middleware'], function () {
     });
 
     Route::prefix('metas')->group(function () {
+        Route::get('/resumo', [MetaController::class, 'resumo']);
         Route::post('/criar', [MetaController::class, 'criar']);
         Route::get('/listar', [MetaController::class, 'listar']);
         Route::get('/detalhes/{id}', [MetaController::class, 'detalhes']);

@@ -13,6 +13,18 @@ use Carbon\Carbon;
 
 class AuthService
 {
+    private function accessTokenExpiresAt(): string
+    {
+        $ttlMinutes = (int) config('jwt.ttl', 60);
+        return Carbon::now()->addMinutes($ttlMinutes)->toIso8601String();
+    }
+
+    private function refreshTokenExpiresAt(): string
+    {
+        $refreshTtlMinutes = (int) config('jwt.refresh_ttl', 43200);
+        return Carbon::now()->addMinutes($refreshTtlMinutes)->toIso8601String();
+    }
+
     public function login(string $usuario, string $senha): array
     {
         $usuario = Usuario::where('usuario', $usuario)->first();
@@ -36,7 +48,8 @@ class AuthService
             ],
             'access_token' => $accessToken,
             'refresh_token' => $refreshToken,
-            'expires_at' => Carbon::now()->addDays(30)->toIso8601String(),
+            'expires_at' => $this->accessTokenExpiresAt(),
+            'refresh_expires_at' => $this->refreshTokenExpiresAt(),
         ];
     }
 
@@ -66,7 +79,8 @@ class AuthService
             ],
             'access_token' => $accessToken,
             'refresh_token' => $newRefreshToken,
-            'expires_at' => Carbon::now()->addDays(30)->toIso8601String(),
+            'expires_at' => $this->accessTokenExpiresAt(),
+            'refresh_expires_at' => $this->refreshTokenExpiresAt(),
         ];
     }
 

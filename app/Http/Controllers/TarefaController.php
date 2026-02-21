@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Helpers\ResponseHelper;
 use App\Services\TarefaService;
-use Illuminate\Support\Facades\Auth;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 
 
 
@@ -18,6 +20,31 @@ class TarefaController extends Controller
         $this->service = $service;
     }
 
+    private function getUsuarioFromToken(Request $request)
+    {
+        try {
+            $token = $request->cookie('token') ?: JWTAuth::getToken();
+
+            if (!$token) {
+                return ResponseHelper::error('Token ausente', 401);
+            }
+
+            $usuario = JWTAuth::setToken($token)->authenticate();
+
+            if (!$usuario) {
+                return ResponseHelper::error('Usuário não autenticado', 401);
+            }
+
+            return $usuario;
+        } catch (TokenExpiredException $e) {
+            return ResponseHelper::error('Token expirado', 401);
+        } catch (TokenInvalidException $e) {
+            return ResponseHelper::error('Token inválido', 401);
+        } catch (\Exception $e) {
+            return ResponseHelper::error('Erro ao autenticar usuário: ' . $e->getMessage(), 401);
+        }
+    }
+
     public function criar(Request $request)
     {
         try {
@@ -28,9 +55,9 @@ class TarefaController extends Controller
                 'status' => 'sometimes|string|in:pendente,concluida',
             ]);
 
-            $usuario = Auth::user();
-            if (!$usuario) {
-                return ResponseHelper::error('Usuário não autenticado', 401);
+            $usuario = $this->getUsuarioFromToken($request);
+            if ($usuario instanceof \Illuminate\Http\JsonResponse) {
+                return $usuario;
             }
             $tarefa = $this->service->criarTarefa(
                 $usuario->id_usuario,
@@ -49,10 +76,10 @@ class TarefaController extends Controller
     public function listar()
     {
         try {
-            $usuario = Auth::user();
-
-            if (!$usuario) {
-                return ResponseHelper::error('Usuário não autenticado', 401);
+            $request = request();
+            $usuario = $this->getUsuarioFromToken($request);
+            if ($usuario instanceof \Illuminate\Http\JsonResponse) {
+                return $usuario;
             }
 
             $id_meta = request()->query('id_meta');
@@ -73,10 +100,9 @@ class TarefaController extends Controller
                 'ativo' => 'sometimes|boolean',
             ]);
 
-            $usuario = Auth::user();
-
-            if (!$usuario) {
-                return ResponseHelper::error('Usuário não autenticado', 401);
+            $usuario = $this->getUsuarioFromToken($request);
+            if ($usuario instanceof \Illuminate\Http\JsonResponse) {
+                return $usuario;
             }
 
             $tarefaAtualizada = $this->service->atualizarTarefa(

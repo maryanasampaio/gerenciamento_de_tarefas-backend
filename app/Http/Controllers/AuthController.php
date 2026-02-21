@@ -17,6 +17,16 @@ class AuthController extends Controller
 {
     protected $authService;
 
+    private function accessTokenTtlMinutes(): int
+    {
+        return (int) config('jwt.ttl', 60);
+    }
+
+    private function refreshTokenTtlMinutes(): int
+    {
+        return (int) config('jwt.refresh_ttl', 43200);
+    }
+
     public function __construct(AuthService $authService)
     {
         $this->authService = $authService;
@@ -44,7 +54,7 @@ class AuthController extends Controller
                 ->cookie(
                     'token',
                     $resultado['access_token'],
-                    60,
+                    $this->accessTokenTtlMinutes(),
                     '/',
                     null,
                     app()->environment('production'),
@@ -55,7 +65,7 @@ class AuthController extends Controller
                 ->cookie(
                     'refresh_token',
                     $resultado['refresh_token'],
-                    43200,
+                    $this->refreshTokenTtlMinutes(),
                     '/',
                     null,
                     app()->environment('production'),
@@ -84,7 +94,7 @@ class AuthController extends Controller
     public function refresh(Request $request)
     {
         try {
-            $refreshToken = $request->cookie('refresh_token') 
+            $refreshToken = $request->cookie('refresh_token')
                 ?? $request->input('refresh_token');
 
             if (!$refreshToken) {
@@ -102,7 +112,7 @@ class AuthController extends Controller
                 ->cookie(
                     'token',
                     $resultado['access_token'],
-                    60,
+                    $this->accessTokenTtlMinutes(),
                     '/',
                     null,
                     app()->environment('production'),
@@ -113,7 +123,7 @@ class AuthController extends Controller
                 ->cookie(
                     'refresh_token',
                     $resultado['refresh_token'],
-                    43200,
+                    $this->refreshTokenTtlMinutes(),
                     '/',
                     null,
                     app()->environment('production'),
@@ -129,7 +139,7 @@ class AuthController extends Controller
     public function usuarioAutenticado(Request $request)
     {
         try {
-            $token = $request->cookie('token');
+            $token = $request->cookie('token') ?: JWTAuth::getToken();
             if (!$token) {
                 return ResponseHelper::error('Token ausente', 401);
             }
@@ -147,7 +157,55 @@ class AuthController extends Controller
                 'email'         => $usuario->email,
             ], 'Usuário autenticado obtido com sucesso', 200);
         } catch (TokenExpiredException $e) {
-            return ResponseHelper::error('Token expirado', 401);
+            try {
+                $refreshToken = $request->cookie('refresh_token')
+                    ?? $request->input('refresh_token');
+
+                if (!$refreshToken) {
+                    return ResponseHelper::error('Token expirado', 401);
+                }
+
+                $resultado = $this->authService->refresh($refreshToken);
+
+                $novoAccessToken = $resultado['access_token'];
+
+                $usuario = JWTAuth::setToken($novoAccessToken)->authenticate();
+
+                if (!$usuario) {
+                    return ResponseHelper::error('Usuário não encontrado', 404);
+                }
+
+                return ResponseHelper::success([
+                    'id_usuario'    => $usuario->id_usuario,
+                    'nome_completo' => $usuario->nome_completo,
+                    'usuario'       => $usuario->usuario,
+                    'email'         => $usuario->email,
+                ], 'Usuário autenticado obtido com sucesso', 200)
+                    ->cookie(
+                        'token',
+                        $novoAccessToken,
+                        $this->accessTokenTtlMinutes(),
+                        '/',
+                        null,
+                        app()->environment('production'),
+                        true,
+                        false,
+                        'Lax'
+                    )
+                    ->cookie(
+                        'refresh_token',
+                        $resultado['refresh_token'],
+                        $this->refreshTokenTtlMinutes(),
+                        '/',
+                        null,
+                        app()->environment('production'),
+                        true,
+                        false,
+                        'Lax'
+                    );
+            } catch (\Exception $e2) {
+                return ResponseHelper::error('Token expirado', 401);
+            }
         } catch (TokenInvalidException $e) {
             return ResponseHelper::error('Token inválido', 401);
         } catch (JWTException $e) {

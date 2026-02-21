@@ -40,9 +40,13 @@ class Kernel extends HttpKernel
     ];
 
     /**
-     * Route middleware.
+     * Route middleware aliases.
+     *
+     * Em versões recentes do Laravel, o Kernel utiliza
+     * a propriedade $middlewareAliases para registrar
+     * middlewares nomeados (ex: 'jwt.cookie').
      */
-    protected $routeMiddleware = [
+    protected $middlewareAliases = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'bindings' => \Illuminate\Routing\Middleware\SubstituteBindings::class,
@@ -56,7 +60,5 @@ class Kernel extends HttpKernel
         'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
         'jwt.refresh' => \Tymon\JWTAuth\Http\Middleware\RefreshToken::class,
         'jwt.cookie' => \App\Http\Middleware\JwtCookieMiddleware::class,
-
-
     ];
 }
