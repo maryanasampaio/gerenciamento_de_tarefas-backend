@@ -6,6 +6,12 @@ use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\TarefaController;
 use App\Http\Controllers\MetaController;
 
+Route::get('/', function () {
+    return response()->json([
+        'status' => 'online'
+    ]);
+});
+
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
