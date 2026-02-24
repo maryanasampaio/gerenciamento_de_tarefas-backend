@@ -7,11 +7,13 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
+    libpq-dev \
     zip \
-    unzip
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instalar extensões PHP necessárias
-RUN docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath gd
+# Instalar extensões PHP necessárias (MySQL + PostgreSQL)
+RUN docker-php-ext-install pdo pdo_mysql pdo_pgsql pgsql mbstring exif pcntl bcmath gd
 
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
