@@ -74,7 +74,10 @@ class AuthController extends Controller
                     'Lax'
                 );
         } catch (\Exception $e) {
-            return ResponseHelper::error($e->getMessage(), 500);
+            $mensagem = $e->getMessage();
+            $status = in_array($mensagem, ['Usuário não encontrado', 'Senha inválida']) ? 401 : 500;
+
+            return ResponseHelper::error($mensagem, $status);
         }
     }
 
