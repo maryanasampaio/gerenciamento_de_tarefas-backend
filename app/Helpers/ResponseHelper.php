@@ -11,7 +11,7 @@ class ResponseHelper
             'status' => $status,
             'mensagem' => $mensagem,
             'dados' => $data
-        ]);
+        ], $status);
     }
 
 
@@ -21,6 +21,6 @@ class ResponseHelper
             'status' => $status,
             'mensagem' => $mensagem,
             'dados' => $data
-        ]);
+        ], $status);
     }
 }
