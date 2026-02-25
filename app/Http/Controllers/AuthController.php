@@ -27,6 +27,16 @@ class AuthController extends Controller
         return (int) config('jwt.refresh_ttl', 43200);
     }
 
+    private function cookieSecure(): bool
+    {
+        return app()->environment('production');
+    }
+
+    private function cookieSameSite(): string
+    {
+        return app()->environment('production') ? 'None' : 'Lax';
+    }
+
     public function __construct(AuthService $authService)
     {
         $this->authService = $authService;
@@ -50,6 +60,9 @@ class AuthController extends Controller
                     'message' => 'Login realizado com sucesso',
                     'usuario' => $resultado['usuario'],
                     'access_token' => $resultado['access_token'],
+                    'refresh_token' => $resultado['refresh_token'],
+                    'expires_at' => $resultado['expires_at'],
+                    'refresh_expires_at' => $resultado['refresh_expires_at'],
                 ], 200)
                 ->cookie(
                     'token',
@@ -57,10 +70,10 @@ class AuthController extends Controller
                     $this->accessTokenTtlMinutes(),
                     '/',
                     null,
-                    app()->environment('production'),
+                    $this->cookieSecure(),
                     true,
                     false,
-                    'Lax'
+                    $this->cookieSameSite()
                 )
                 ->cookie(
                     'refresh_token',
@@ -68,10 +81,10 @@ class AuthController extends Controller
                     $this->refreshTokenTtlMinutes(),
                     '/',
                     null,
-                    app()->environment('production'),
+                    $this->cookieSecure(),
                     true,
                     false,
-                    'Lax'
+                    $this->cookieSameSite()
                 );
         } catch (\Exception $e) {
             $mensagem = $e->getMessage();
@@ -111,6 +124,9 @@ class AuthController extends Controller
                     'message' => 'Token renovado com sucesso',
                     'usuario' => $resultado['usuario'],
                     'access_token' => $resultado['access_token'],
+                    'refresh_token' => $resultado['refresh_token'],
+                    'expires_at' => $resultado['expires_at'],
+                    'refresh_expires_at' => $resultado['refresh_expires_at'],
                 ], 200)
                 ->cookie(
                     'token',
@@ -118,10 +134,10 @@ class AuthController extends Controller
                     $this->accessTokenTtlMinutes(),
                     '/',
                     null,
-                    app()->environment('production'),
+                    $this->cookieSecure(),
                     true,
                     false,
-                    'Lax'
+                    $this->cookieSameSite()
                 )
                 ->cookie(
                     'refresh_token',
@@ -129,10 +145,10 @@ class AuthController extends Controller
                     $this->refreshTokenTtlMinutes(),
                     '/',
                     null,
-                    app()->environment('production'),
+                    $this->cookieSecure(),
                     true,
                     false,
-                    'Lax'
+                    $this->cookieSameSite()
                 );
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 401);
@@ -190,10 +206,10 @@ class AuthController extends Controller
                         $this->accessTokenTtlMinutes(),
                         '/',
                         null,
-                        app()->environment('production'),
+                        $this->cookieSecure(),
                         true,
                         false,
-                        'Lax'
+                        $this->cookieSameSite()
                     )
                     ->cookie(
                         'refresh_token',
@@ -201,10 +217,10 @@ class AuthController extends Controller
                         $this->refreshTokenTtlMinutes(),
                         '/',
                         null,
-                        app()->environment('production'),
+                        $this->cookieSecure(),
                         true,
                         false,
-                        'Lax'
+                        $this->cookieSameSite()
                     );
             } catch (\Exception $e2) {
                 return ResponseHelper::error('Token expirado', 401);

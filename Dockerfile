@@ -32,5 +32,5 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 EXPOSE 8080
 
 # Servidor embutido do PHP apontando para a pasta public do Laravel.
-# Railway normalmente expõe a porta 8080 para serviços Docker.
-CMD php -S 0.0.0.0:8080 -t public
+# Usa a variável de ambiente PORT definida pelo Railway (com 8080 como padrão).
+CMD php -S 0.0.0.0:${PORT:-8080} -t public
