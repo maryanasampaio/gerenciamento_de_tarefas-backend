@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Meta;
 use App\Models\TarefaModel;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class MetaService
 {
@@ -205,6 +206,13 @@ class MetaService
     private function sincronizarStatusMeta(Meta $meta): void
     {
         $progresso = $this->calcularProgresso($meta->id_meta);
+
+        // Sem tarefas, status pode ser manual (pendente/concluida).
+        // Não sobrescrever automaticamente na listagem.
+        if (($progresso['total'] ?? 0) === 0) {
+            return;
+        }
+
         $statusCalculado = $this->resolverStatusPorProgresso($progresso['total'], $progresso['concluidas']);
 
         if ($meta->status !== $statusCalculado) {
@@ -235,11 +243,27 @@ class MetaService
             throw new \Exception('Meta não encontrada ou não pertence ao usuário.');
         }
 
+        $dados = collect($dados)->only([
+            'titulo',
+            'descricao',
+            'contexto',
+            'prioridade',
+            'tipo',
+            'data_inicio',
+            'data_fim',
+            'ativo',
+            'status',
+        ])->toArray();
+
         if (isset($dados['tipo']) && !in_array($dados['tipo'], ['diaria', 'mensal', 'anual'])) {
             throw new \Exception('Tipo de meta inválido');
         }
         if (isset($dados['prioridade']) && !in_array($dados['prioridade'], ['baixa', 'media', 'alta'])) {
             throw new \Exception('Prioridade inválida');
+        }
+
+        if (isset($dados['status']) && !in_array($dados['status'], ['pendente', 'concluida'])) {
+            throw new \Exception('Status inválido');
         }
 
         // Normalizar datas quando enviadas
@@ -255,11 +279,38 @@ class MetaService
             $dados['data_fim'] = null;
         }
 
-        $meta->fill($dados);
-        $meta->save();
+        $progressoAtual = $this->calcularProgresso($id_meta);
+        $totalTarefas = $progressoAtual['total'] ?? 0;
+        $statusSolicitado = $dados['status'] ?? null;
 
-        // status é auto-gerenciado pelas tarefas
-        $this->atualizarStatusMetaPorTarefas($id_meta);
+        DB::transaction(function () use ($meta, $dados, $id_meta, $totalTarefas, $statusSolicitado) {
+            // Regra de domínio:
+            // - sem tarefas: status manual permitido (pendente/concluida)
+            // - com tarefas: ao marcar meta como concluida, concluir todas as tarefas
+            // - com tarefas: para voltar a pendente, atualizar tarefas individualmente
+            if ($totalTarefas > 0) {
+                if ($statusSolicitado === 'concluida') {
+                    TarefaModel::where('id_meta', $id_meta)
+                        ->where('status', '!=', 'concluida')
+                        ->update([
+                            'status' => 'concluida',
+                            'updated_at' => now(),
+                        ]);
+                } elseif ($statusSolicitado === 'pendente') {
+                    throw new \Exception('Para marcar meta com tarefas como pendente, atualize as tarefas.');
+                }
+
+                $meta->fill(collect($dados)->except('status')->toArray());
+                $meta->save();
+                $this->atualizarStatusMetaPorTarefas($id_meta);
+                return;
+            }
+
+            $meta->fill($dados);
+            $meta->save();
+        });
+
+        $meta->refresh();
 
         $progresso = $this->calcularProgresso($id_meta);
         return array_merge($meta->toArray(), ['progresso' => $progresso]);
@@ -291,6 +342,13 @@ class MetaService
     {
         $total = TarefaModel::where('id_meta', $id_meta)->count();
         $concluidas = TarefaModel::where('id_meta', $id_meta)->where('status', 'concluida')->count();
+
+        // Sem tarefas, não forçar status para pendente.
+        // Mantém o status manual da meta.
+        if ($total === 0) {
+            return;
+        }
+
         $novoStatus = $this->resolverStatusPorProgresso($total, $concluidas);
 
         $meta = Meta::find($id_meta);
