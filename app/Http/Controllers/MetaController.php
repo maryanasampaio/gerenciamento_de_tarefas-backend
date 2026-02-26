@@ -157,6 +157,7 @@ class MetaController extends Controller
                 'tipo' => 'sometimes|string|in:diaria,mensal,anual',
                 'data_inicio' => 'sometimes|string|nullable',
                 'data_fim' => 'sometimes|string|nullable',
+                'status' => 'sometimes|string|in:pendente,concluida',
             ]);
             $usuario = $this->getUsuarioFromToken($request);
             if ($usuario instanceof \Illuminate\Http\JsonResponse) {
@@ -165,7 +166,14 @@ class MetaController extends Controller
             $meta = $this->metaService->atualizarMeta($id, $request->all(), $usuario->id_usuario);
             return ResponseHelper::success($meta, 'Meta atualizada com sucesso', 200);
         } catch (\Exception $e) {
-            return ResponseHelper::error('Erro ao atualizar meta: ' . $e->getMessage(), 500);
+            $mensagem = $e->getMessage();
+            $status = str_contains($mensagem, 'Status da meta é automático')
+                || str_contains($mensagem, 'Para marcar meta com tarefas')
+                || str_contains($mensagem, 'inválido')
+                ? 422
+                : 500;
+
+            return ResponseHelper::error('Erro ao atualizar meta: ' . $mensagem, $status);
         }
     }
 
