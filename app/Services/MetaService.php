@@ -50,10 +50,11 @@ class MetaService
             $dados['data_inicio'] = $inicio;
             $dados['data_fim'] = $fim;
         }
-        // Para metas diárias, ignorar datas se enviadas
+        // Para metas diárias, usar o dia atual como período
         if ($dados['tipo'] === 'diaria') {
-            $dados['data_inicio'] = null;
-            $dados['data_fim'] = null;
+            $hoje = Carbon::now()->format('Y-m-d');
+            $dados['data_inicio'] = $hoje;
+            $dados['data_fim'] = $hoje;
         }
 
         $dadosParaSalvar = [
@@ -146,14 +147,32 @@ class MetaService
 
         if ($tipo === 'diaria') {
             $dateFilter = $dateFilter ?: \Carbon\Carbon::now()->format('Y-m-d');
-            $query->whereDate('created_at', $dateFilter);
+            $query->where('tipo', 'diaria')
+                ->where(function ($q) use ($dateFilter) {
+                    $q->where(function ($q2) use ($dateFilter) {
+                        $q2->where('data_inicio', '<=', $dateFilter)
+                            ->where('data_fim', '>=', $dateFilter);
+                    })->orWhere(function ($q3) {
+                        $q3->whereNull('data_inicio')
+                            ->whereNull('data_fim');
+                    });
+                });
         } elseif ($dateFilter && in_array($tipo, ['mensal', 'anual'])) {
             $query->where('data_inicio', '<=', $dateFilter)->where('data_fim', '>=', $dateFilter);
         } elseif ($dateFilter && !$tipo) {
             // Sem tipo: combinar filtros — diárias no dia e mensais/anuais que contem o dia
             $query->where(function ($q) use ($dateFilter) {
                 $q->where(function ($q2) use ($dateFilter) {
-                    $q2->where('tipo', 'diaria')->whereDate('created_at', $dateFilter);
+                    $q2->where('tipo', 'diaria')
+                        ->where(function ($q4) use ($dateFilter) {
+                            $q4->where(function ($q5) use ($dateFilter) {
+                                $q5->where('data_inicio', '<=', $dateFilter)
+                                    ->where('data_fim', '>=', $dateFilter);
+                            })->orWhere(function ($q5) {
+                                $q5->whereNull('data_inicio')
+                                    ->whereNull('data_fim');
+                            });
+                        });
                 })->orWhere(function ($q3) use ($dateFilter) {
                     $q3->whereIn('tipo', ['mensal', 'anual'])
                         ->where('data_inicio', '<=', $dateFilter)
@@ -172,6 +191,38 @@ class MetaService
             $progresso = $this->calcularProgresso($meta->id_meta);
             return array_merge($meta->toArray(), ['progresso' => $progresso]);
         });
+
+        if ($tipo === 'diaria' && $dateFilter) {
+            $metas = $metas->filter(function (array $meta) use ($dateFilter) {
+                if (!empty($meta['data_inicio']) && !empty($meta['data_fim'])) {
+                    return $meta['data_inicio'] <= $dateFilter && $meta['data_fim'] >= $dateFilter;
+                }
+
+                $createdDate = Carbon::parse($meta['created_at'])
+                    ->setTimezone(config('app.timezone', 'UTC'))
+                    ->format('Y-m-d');
+
+                return $createdDate === $dateFilter;
+            })->values();
+        }
+
+        if (!$tipo && $dateFilter) {
+            $metas = $metas->filter(function (array $meta) use ($dateFilter) {
+                if ($meta['tipo'] === 'diaria') {
+                    if (!empty($meta['data_inicio']) && !empty($meta['data_fim'])) {
+                        return $meta['data_inicio'] <= $dateFilter && $meta['data_fim'] >= $dateFilter;
+                    }
+
+                    $createdDate = Carbon::parse($meta['created_at'])
+                        ->setTimezone(config('app.timezone', 'UTC'))
+                        ->format('Y-m-d');
+
+                    return $createdDate === $dateFilter;
+                }
+
+                return true;
+            })->values();
+        }
 
         \Log::info('[MetaService::listarMetas] Metas encontradas antes do filtro de status:', [
             'count' => $metas->count(),
@@ -273,10 +324,11 @@ class MetaService
         if (array_key_exists('data_fim', $dados)) {
             $dados['data_fim'] = $this->normalizeDate($dados['data_fim']);
         }
-        // Se tipo mudar para diaria, limpar datas
+        // Se tipo mudar para diaria ou já for diaria, garantir período válido
         if (($dados['tipo'] ?? $meta->tipo) === 'diaria') {
-            $dados['data_inicio'] = null;
-            $dados['data_fim'] = null;
+            $hoje = Carbon::now()->format('Y-m-d');
+            $dados['data_inicio'] = $hoje;
+            $dados['data_fim'] = $hoje;
         }
 
         $progressoAtual = $this->calcularProgresso($id_meta);
